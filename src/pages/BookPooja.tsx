@@ -1,6 +1,10 @@
 
 import { useState } from 'react';
 import { Calendar, Clock, User, Heart, Star } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/hooks/useAuth';
+import { useToast } from '@/hooks/use-toast';
+import AuthModal from '@/components/AuthModal';
 
 const BookPooja = () => {
   const [selectedPooja, setSelectedPooja] = useState('');
@@ -13,34 +17,40 @@ const BookPooja = () => {
     occasion: '',
     specialRequests: ''
   });
+  const [loading, setLoading] = useState(false);
+  const [authModalOpen, setAuthModalOpen] = useState(false);
+  const [authMode, setAuthMode] = useState<'login' | 'signup'>('login');
+  
+  const { user } = useAuth();
+  const { toast } = useToast();
 
   const poojaServices = [
     {
       id: 'rudrabhishek',
       name: 'Rudrabhishek',
       duration: '2 hours',
-      price: '₹1,100',
+      price: 1100,
       description: 'Complete Rudrabhishek with 11 types of offerings to Lord Shiva'
     },
     {
       id: 'mahamrityunjaya',
       name: 'Mahamrityunjaya Havan',
       duration: '1.5 hours',
-      price: '₹851',
+      price: 851,
       description: 'Special havan for health, longevity and protection'
     },
     {
       id: 'abhishek',
       name: 'Daily Abhishek',
       duration: '30 minutes',
-      price: '₹251',
+      price: 251,
       description: 'Simple abhishek with milk, water and flowers'
     },
     {
       id: 'special',
       name: 'Special Occasion Pooja',
       duration: '3 hours',
-      price: '₹2,100',
+      price: 2100,
       description: 'Comprehensive pooja for special occasions and festivals'
     }
   ];
@@ -50,14 +60,95 @@ const BookPooja = () => {
     '4:00 PM', '5:00 PM', '6:00 PM', '7:00 PM', '8:00 PM'
   ];
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!selectedPooja || !selectedDate || !selectedTime) {
-      alert('Please select a pooja service, date, and time slot.');
+    
+    if (!user) {
+      setAuthModalOpen(true);
       return;
     }
-    alert('Pooja booking submitted successfully! You will receive a confirmation shortly.');
+
+    if (!selectedPooja || !selectedDate || !selectedTime) {
+      toast({
+        title: "Error",
+        description: "Please select a pooja service, date, and time slot.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      const selectedService = poojaServices.find(p => p.id === selectedPooja);
+      if (!selectedService) throw new Error('Selected service not found');
+
+      // Create booking record
+      const { data: booking, error: bookingError } = await supabase
+        .from('pooja_bookings')
+        .insert([{
+          user_id: user.id,
+          pooja_service: selectedService.name,
+          booking_date: selectedDate,
+          booking_time: selectedTime,
+          full_name: bookingDetails.name,
+          email: bookingDetails.email,
+          phone: bookingDetails.phone,
+          occasion: bookingDetails.occasion,
+          special_requests: bookingDetails.specialRequests,
+          amount: selectedService.price,
+          payment_status: 'pending'
+        }])
+        .select()
+        .single();
+
+      if (bookingError) throw bookingError;
+
+      // Process payment
+      const { data: paymentResult, error: paymentError } = await supabase.functions.invoke('process-payment', {
+        body: {
+          amount: selectedService.price,
+          currency: 'INR',
+          orderId: `booking_${booking.id}`,
+          type: 'pooja',
+          bookingData: booking
+        }
+      });
+
+      if (paymentError) throw paymentError;
+
+      if (paymentResult.success) {
+        toast({
+          title: "Booking Confirmed!",
+          description: "Your pooja has been booked successfully. You will receive a confirmation email shortly.",
+        });
+
+        // Reset form
+        setSelectedPooja('');
+        setSelectedDate('');
+        setSelectedTime('');
+        setBookingDetails({
+          name: '',
+          email: '',
+          phone: '',
+          occasion: '',
+          specialRequests: ''
+        });
+      } else {
+        throw new Error('Payment failed');
+      }
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to book pooja. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
   };
+
+  const selectedService = poojaServices.find(p => p.id === selectedPooja);
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -91,7 +182,7 @@ const BookPooja = () => {
                   >
                     <div className="flex justify-between items-start mb-3">
                       <h3 className="font-bold text-lg text-gray-800">{pooja.name}</h3>
-                      <span className="text-purple-600 font-bold text-lg">{pooja.price}</span>
+                      <span className="text-purple-600 font-bold text-lg">₹{pooja.price}</span>
                     </div>
                     <div className="flex items-center text-gray-600 mb-3">
                       <Clock className="h-4 w-4 mr-2" />
@@ -143,6 +234,15 @@ const BookPooja = () => {
           {/* Booking Form */}
           <div className="bg-white rounded-lg shadow-lg p-8">
             <h2 className="text-2xl font-bold text-gray-800 mb-6">Booking Details</h2>
+            
+            {!user && (
+              <div className="mb-6 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+                <p className="text-yellow-800 text-sm">
+                  Please log in to continue with your booking.
+                </p>
+              </div>
+            )}
+
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -206,19 +306,20 @@ const BookPooja = () => {
               </div>
               <button
                 type="submit"
-                className="w-full bg-purple-600 hover:bg-purple-700 text-white py-3 px-6 rounded-lg font-semibold transition-colors"
+                disabled={loading}
+                className="w-full bg-purple-600 hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed text-white py-3 px-6 rounded-lg font-semibold transition-colors"
               >
-                Book Pooja
+                {loading ? 'Processing...' : user ? 'Book Pooja & Pay' : 'Login to Book'}
               </button>
             </form>
 
             {/* Booking Summary */}
-            {selectedPooja && (
+            {selectedService && (
               <div className="mt-6 p-4 bg-purple-50 rounded-lg">
                 <h3 className="font-semibold text-purple-800 mb-2">Booking Summary</h3>
                 <div className="text-sm text-purple-700 space-y-1">
-                  <p><span className="font-medium">Service:</span> {poojaServices.find(p => p.id === selectedPooja)?.name}</p>
-                  <p><span className="font-medium">Price:</span> {poojaServices.find(p => p.id === selectedPooja)?.price}</p>
+                  <p><span className="font-medium">Service:</span> {selectedService.name}</p>
+                  <p><span className="font-medium">Price:</span> ₹{selectedService.price}</p>
                   {selectedDate && <p><span className="font-medium">Date:</span> {selectedDate}</p>}
                   {selectedTime && <p><span className="font-medium">Time:</span> {selectedTime}</p>}
                 </div>
@@ -256,6 +357,13 @@ const BookPooja = () => {
           </div>
         </div>
       </div>
+
+      <AuthModal
+        isOpen={authModalOpen}
+        onClose={() => setAuthModalOpen(false)}
+        mode={authMode}
+        onToggleMode={() => setAuthMode(authMode === 'login' ? 'signup' : 'login')}
+      />
     </div>
   );
 };

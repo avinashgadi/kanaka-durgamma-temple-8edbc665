@@ -9,7 +9,150 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
-      [_ in never]: never
+      contact_messages: {
+        Row: {
+          created_at: string | null
+          email: string
+          id: string
+          message: string
+          name: string
+          phone: string
+        }
+        Insert: {
+          created_at?: string | null
+          email: string
+          id?: string
+          message: string
+          name: string
+          phone: string
+        }
+        Update: {
+          created_at?: string | null
+          email?: string
+          id?: string
+          message?: string
+          name?: string
+          phone?: string
+        }
+        Relationships: []
+      }
+      donations: {
+        Row: {
+          amount: number
+          created_at: string | null
+          donation_type: string
+          donor_name: string
+          email: string
+          id: string
+          message: string | null
+          payment_id: string | null
+          payment_status: string | null
+          phone: string
+          user_id: string | null
+        }
+        Insert: {
+          amount: number
+          created_at?: string | null
+          donation_type: string
+          donor_name: string
+          email: string
+          id?: string
+          message?: string | null
+          payment_id?: string | null
+          payment_status?: string | null
+          phone: string
+          user_id?: string | null
+        }
+        Update: {
+          amount?: number
+          created_at?: string | null
+          donation_type?: string
+          donor_name?: string
+          email?: string
+          id?: string
+          message?: string | null
+          payment_id?: string | null
+          payment_status?: string | null
+          phone?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
+      pooja_bookings: {
+        Row: {
+          amount: number
+          booking_date: string
+          booking_time: string
+          created_at: string | null
+          email: string
+          full_name: string
+          id: string
+          occasion: string | null
+          payment_id: string | null
+          payment_status: string | null
+          phone: string
+          pooja_service: string
+          special_requests: string | null
+          user_id: string | null
+        }
+        Insert: {
+          amount: number
+          booking_date: string
+          booking_time: string
+          created_at?: string | null
+          email: string
+          full_name: string
+          id?: string
+          occasion?: string | null
+          payment_id?: string | null
+          payment_status?: string | null
+          phone: string
+          pooja_service: string
+          special_requests?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          amount?: number
+          booking_date?: string
+          booking_time?: string
+          created_at?: string | null
+          email?: string
+          full_name?: string
+          id?: string
+          occasion?: string | null
+          payment_id?: string | null
+          payment_status?: string | null
+          phone?: string
+          pooja_service?: string
+          special_requests?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          created_at: string | null
+          full_name: string | null
+          id: string
+          phone: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          full_name?: string | null
+          id: string
+          phone?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          full_name?: string | null
+          id?: string
+          phone?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never

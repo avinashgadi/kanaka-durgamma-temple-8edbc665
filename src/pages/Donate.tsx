@@ -1,6 +1,10 @@
 
 import { useState } from 'react';
 import { Heart, CreditCard, Smartphone, QrCode } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/hooks/useAuth';
+import { useToast } from '@/hooks/use-toast';
+import AuthModal from '@/components/AuthModal';
 
 const Donate = () => {
   const [selectedAmount, setSelectedAmount] = useState('1000');
@@ -17,6 +21,12 @@ const Donate = () => {
     anonymous: false,
     comments: ''
   });
+  const [loading, setLoading] = useState(false);
+  const [authModalOpen, setAuthModalOpen] = useState(false);
+  const [authMode, setAuthMode] = useState<'login' | 'signup'>('login');
+
+  const { user } = useAuth();
+  const { toast } = useToast();
 
   const predefinedAmounts = ['500', '1000', '2500', '5000', '10000'];
 
@@ -30,10 +40,91 @@ const Donate = () => {
     setSelectedAmount('');
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const amount = customAmount || selectedAmount;
-    alert(`Thank you for your donation of ₹${amount}! Redirecting to payment gateway...`);
+    
+    if (!user) {
+      setAuthModalOpen(true);
+      return;
+    }
+
+    const amount = parseFloat(customAmount || selectedAmount);
+    if (!amount || amount <= 0) {
+      toast({
+        title: "Error",
+        description: "Please enter a valid donation amount.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      // Create donation record
+      const { data: donation, error: donationError } = await supabase
+        .from('donations')
+        .insert([{
+          user_id: user.id,
+          donor_name: `${donorInfo.firstName} ${donorInfo.lastName}`,
+          email: donorInfo.email,
+          phone: donorInfo.phone,
+          amount: amount,
+          donation_type: 'general',
+          message: donorInfo.comments,
+          payment_status: 'pending'
+        }])
+        .select()
+        .single();
+
+      if (donationError) throw donationError;
+
+      // Process payment
+      const { data: paymentResult, error: paymentError } = await supabase.functions.invoke('process-payment', {
+        body: {
+          amount: amount,
+          currency: 'INR',
+          orderId: `donation_${donation.id}`,
+          type: 'donation',
+          donationData: donation
+        }
+      });
+
+      if (paymentError) throw paymentError;
+
+      if (paymentResult.success) {
+        toast({
+          title: "Donation Successful!",
+          description: `Thank you for your generous donation of ₹${amount}. You will receive a receipt shortly.`,
+        });
+
+        // Reset form
+        setSelectedAmount('1000');
+        setCustomAmount('');
+        setDonorInfo({
+          firstName: '',
+          lastName: '',
+          email: '',
+          phone: '',
+          address: '',
+          city: '',
+          zipCode: '',
+          country: '',
+          anonymous: false,
+          comments: ''
+        });
+      } else {
+        throw new Error('Payment failed');
+      }
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to process donation. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -54,6 +145,14 @@ const Donate = () => {
           {/* Donation Form */}
           <div className="bg-white rounded-lg shadow-lg p-8">
             <h2 className="text-2xl font-bold text-gray-800 mb-6">Make a Donation</h2>
+            
+            {!user && (
+              <div className="mb-6 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+                <p className="text-yellow-800 text-sm">
+                  Please log in to continue with your donation.
+                </p>
+              </div>
+            )}
             
             <form onSubmit={handleSubmit} className="space-y-6">
               {/* Amount Selection */}
@@ -129,77 +228,16 @@ const Donate = () => {
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Phone Number
+                    Phone Number *
                   </label>
                   <input
                     type="tel"
+                    required
                     value={donorInfo.phone}
                     onChange={(e) => setDonorInfo({...donorInfo, phone: e.target.value})}
                     className="w-full p-3 border border-gray-300 rounded-lg focus:ring-orange-500 focus:border-orange-500"
                   />
                 </div>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Street Address
-                </label>
-                <input
-                  type="text"
-                  value={donorInfo.address}
-                  onChange={(e) => setDonorInfo({...donorInfo, address: e.target.value})}
-                  className="w-full p-3 border border-gray-300 rounded-lg focus:ring-orange-500 focus:border-orange-500"
-                />
-              </div>
-
-              <div className="grid md:grid-cols-3 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    City
-                  </label>
-                  <input
-                    type="text"
-                    value={donorInfo.city}
-                    onChange={(e) => setDonorInfo({...donorInfo, city: e.target.value})}
-                    className="w-full p-3 border border-gray-300 rounded-lg focus:ring-orange-500 focus:border-orange-500"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Zip/Postal Code
-                  </label>
-                  <input
-                    type="text"
-                    value={donorInfo.zipCode}
-                    onChange={(e) => setDonorInfo({...donorInfo, zipCode: e.target.value})}
-                    className="w-full p-3 border border-gray-300 rounded-lg focus:ring-orange-500 focus:border-orange-500"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Country
-                  </label>
-                  <input
-                    type="text"
-                    value={donorInfo.country}
-                    onChange={(e) => setDonorInfo({...donorInfo, country: e.target.value})}
-                    className="w-full p-3 border border-gray-300 rounded-lg focus:ring-orange-500 focus:border-orange-500"
-                  />
-                </div>
-              </div>
-
-              {/* Privacy Option */}
-              <div className="flex items-center">
-                <input
-                  type="checkbox"
-                  id="anonymous"
-                  checked={donorInfo.anonymous}
-                  onChange={(e) => setDonorInfo({...donorInfo, anonymous: e.target.checked})}
-                  className="h-4 w-4 text-orange-600 focus:ring-orange-500 border-gray-300 rounded"
-                />
-                <label htmlFor="anonymous" className="ml-2 text-sm text-gray-600">
-                  No, please keep my information anonymous
-                </label>
               </div>
 
               {/* Comments */}
@@ -218,9 +256,10 @@ const Donate = () => {
 
               <button
                 type="submit"
-                className="w-full bg-orange-500 hover:bg-orange-600 text-white py-4 px-6 rounded-lg font-semibold text-lg transition-colors"
+                disabled={loading}
+                className="w-full bg-orange-500 hover:bg-orange-600 disabled:opacity-50 disabled:cursor-not-allowed text-white py-4 px-6 rounded-lg font-semibold text-lg transition-colors"
               >
-                Donate ₹{customAmount || selectedAmount || '0'}
+                {loading ? 'Processing...' : user ? `Donate ₹${customAmount || selectedAmount || '0'}` : 'Login to Donate'}
               </button>
             </form>
           </div>
@@ -293,6 +332,13 @@ const Donate = () => {
           </div>
         </div>
       </div>
+
+      <AuthModal
+        isOpen={authModalOpen}
+        onClose={() => setAuthModalOpen(false)}
+        mode={authMode}
+        onToggleMode={() => setAuthMode(authMode === 'login' ? 'signup' : 'login')}
+      />
     </div>
   );
 };

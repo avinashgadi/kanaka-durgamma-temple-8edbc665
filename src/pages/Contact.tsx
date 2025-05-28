@@ -1,6 +1,8 @@
 
 import { useState } from 'react';
 import { MapPin, Phone, Mail, Send } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
 
 const Contact = () => {
   const [formData, setFormData] = useState({
@@ -9,11 +11,57 @@ const Contact = () => {
     phone: '',
     message: ''
   });
+  const [loading, setLoading] = useState(false);
+  const { toast } = useToast();
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    alert('Thank you for your message. We will get back to you soon!');
-    setFormData({ name: '', email: '', phone: '', message: '' });
+    setLoading(true);
+
+    try {
+      // Save to database
+      const { error: dbError } = await supabase
+        .from('contact_messages')
+        .insert([formData]);
+
+      if (dbError) throw dbError;
+
+      // Send email notification
+      const { error: emailError } = await supabase.functions.invoke('send-email', {
+        body: {
+          to: 'durgamanshitha1@gmail.com',
+          subject: `New Contact Message from ${formData.name}`,
+          html: `
+            <h2>New Contact Message</h2>
+            <p><strong>Name:</strong> ${formData.name}</p>
+            <p><strong>Email:</strong> ${formData.email}</p>
+            <p><strong>Phone:</strong> ${formData.phone}</p>
+            <p><strong>Message:</strong></p>
+            <p>${formData.message}</p>
+          `,
+          from: formData.email
+        }
+      });
+
+      if (emailError) {
+        console.error('Email error:', emailError);
+      }
+
+      toast({
+        title: "Message sent successfully!",
+        description: "We will get back to you soon.",
+      });
+
+      setFormData({ name: '', email: '', phone: '', message: '' });
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to send message. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -117,10 +165,11 @@ const Contact = () => {
                 </div>
                 <button
                   type="submit"
-                  className="w-full bg-green-500 hover:bg-green-600 text-white py-4 px-6 rounded-lg font-semibold text-lg transition-colors flex items-center justify-center"
+                  disabled={loading}
+                  className="w-full bg-green-500 hover:bg-green-600 disabled:opacity-50 disabled:cursor-not-allowed text-white py-4 px-6 rounded-lg font-semibold text-lg transition-colors flex items-center justify-center"
                 >
                   <Send className="mr-2 h-5 w-5" />
-                  Send
+                  {loading ? 'Sending...' : 'Send'}
                 </button>
               </form>
             </div>
