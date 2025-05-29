@@ -5,6 +5,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 import AuthModal from '@/components/AuthModal';
+import PaymentModal from '@/components/PaymentModal';
 
 const BookPooja = () => {
   const [searchParams] = useSearchParams();
@@ -21,6 +22,8 @@ const BookPooja = () => {
   const [loading, setLoading] = useState(false);
   const [authModalOpen, setAuthModalOpen] = useState(false);
   const [authMode, setAuthMode] = useState<'login' | 'signup'>('login');
+  const [paymentModalOpen, setPaymentModalOpen] = useState(false);
+  const [paymentData, setPaymentData] = useState<any>(null);
   
   const { user } = useAuth();
   const { toast } = useToast();
@@ -120,34 +123,28 @@ const BookPooja = () => {
       const { data: paymentResult, error: paymentError } = await supabase.functions.invoke('process-payment', {
         body: {
           amount: selectedService.price,
-          currency: 'INR',
-          orderId: `booking_${booking.id}`,
-          type: 'pooja',
-          bookingData: booking
+          purpose: `${selectedService.name} - ${bookingDetails.occasion || 'Pooja Booking'}`,
+          userDetails: {
+            name: bookingDetails.name,
+            email: bookingDetails.email,
+            phone: bookingDetails.phone
+          }
         }
       });
 
       if (paymentError) throw paymentError;
 
       if (paymentResult.success) {
+        // Show payment modal with UPI details
+        setPaymentData(paymentResult.qrCode);
+        setPaymentModalOpen(true);
+        
         toast({
-          title: "Booking Confirmed!",
-          description: "Your pooja has been booked successfully. You will receive a confirmation email shortly.",
-        });
-
-        // Reset form
-        setSelectedPooja('');
-        setSelectedDate('');
-        setSelectedTime('');
-        setBookingDetails({
-          name: '',
-          email: '',
-          phone: '',
-          occasion: '',
-          specialRequests: ''
+          title: "Booking Created!",
+          description: "Please complete the payment to confirm your booking.",
         });
       } else {
-        throw new Error('Payment failed');
+        throw new Error('Payment setup failed');
       }
     } catch (error: any) {
       toast({
@@ -376,6 +373,28 @@ const BookPooja = () => {
         mode={authMode}
         onToggleMode={() => setAuthMode(authMode === 'login' ? 'signup' : 'login')}
       />
+
+      {paymentData && (
+        <PaymentModal
+          isOpen={paymentModalOpen}
+          onClose={() => {
+            setPaymentModalOpen(false);
+            setPaymentData(null);
+            // Reset form after payment modal closes
+            setSelectedPooja('');
+            setSelectedDate('');
+            setSelectedTime('');
+            setBookingDetails({
+              name: '',
+              email: '',
+              phone: '',
+              occasion: '',
+              specialRequests: ''
+            });
+          }}
+          paymentData={paymentData}
+        />
+      )}
     </div>
   );
 };

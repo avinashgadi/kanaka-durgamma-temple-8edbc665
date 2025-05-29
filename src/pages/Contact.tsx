@@ -1,8 +1,8 @@
-
 import { useState } from 'react';
 import { MapPin, Phone, Mail, Send } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import TempleMap from '@/components/TempleMap';
 
 const Contact = () => {
   const [formData, setFormData] = useState({
@@ -177,17 +177,22 @@ const Contact = () => {
         </div>
       </div>
 
-      {/* Map Section */}
-      <div className="bg-gray-200 h-96">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 text-center">
-          <h3 className="text-2xl font-bold text-gray-800 mb-4">Temple Location</h3>
-          <p className="text-gray-600 mb-8">FG5C+VH, Indugabilli, Andhra Pradesh 533407</p>
-          <div className="bg-gray-300 h-64 rounded-lg flex items-center justify-center">
-            <div className="text-center">
-              <MapPin className="h-12 w-12 text-gray-600 mx-auto mb-4" />
-              <p className="text-gray-600 text-lg font-semibold">Temple Location</p>
-              <p className="text-gray-500">FG5C+VH, Indugabilli, Andhra Pradesh 533407</p>
-            </div>
+      {/* Interactive Map Section */}
+      <div className="bg-white py-16">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <h3 className="text-2xl font-bold text-center text-gray-800 mb-8">Find Us Here</h3>
+          <TempleMap />
+          <div className="text-center mt-6">
+            <p className="text-gray-600 mb-4">FG5C+VH, Indugabilli, Andhra Pradesh 533407</p>
+            <a
+              href="https://maps.google.com/?q=FG5C+VH,+Indugabilli,+Andhra+Pradesh+533407"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+            >
+              <MapPin className="mr-2 h-5 w-5" />
+              Get Directions
+            </a>
           </div>
         </div>
       </div>
