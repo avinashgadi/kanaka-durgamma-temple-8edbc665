@@ -9,49 +9,48 @@ const corsHeaders = {
 
 interface PaymentRequest {
   amount: number;
-  currency: string;
-  orderId: string;
-  type: 'donation' | 'pooja';
-  donationData?: any;
-  poojaData?: any;
-  paymentMethod?: 'upi' | 'qr' | 'card';
+  purpose: string;
+  userDetails: {
+    name: string;
+    email: string;
+    phone: string;
+  };
 }
 
 const handler = async (req: Request): Promise<Response> => {
+  // Handle CORS preflight requests
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    const { amount, currency, orderId, type, donationData, poojaData, paymentMethod }: PaymentRequest = await req.json();
+    const { amount, purpose, userDetails }: PaymentRequest = await req.json();
 
-    console.log('Processing payment:', { amount, currency, orderId, type, paymentMethod });
+    console.log('Processing payment:', { amount, purpose, userDetails });
 
-    // For now, we'll simulate the payment process
-    // You can provide your PhonePe/GPay QR code and we'll integrate it properly
+    // Generate UPI payment URL with your UPI ID
+    const upiId = "gadhigopi147-3@oksbi";
+    const merchantName = "Shiva Temple";
     
-    // Simulate payment processing delay
-    await new Promise(resolve => setTimeout(resolve, 1000));
+    const upiUrl = `upi://pay?pa=${upiId}&pn=${encodeURIComponent(merchantName)}&am=${amount}&cu=INR&tn=${encodeURIComponent(purpose)}`;
 
-    // Generate payment response
-    const paymentResponse = {
-      success: true,
-      transactionId: `txn_${Date.now()}`,
-      orderId: orderId,
-      amount: amount,
-      currency: currency,
-      status: 'completed',
-      paymentMethod: paymentMethod || 'upi',
-      timestamp: new Date().toISOString(),
-      // QR code data will be added when you provide your UPI details
-      qrCode: paymentMethod === 'qr' ? {
-        upiId: 'merchant@paytm', // Replace with your actual UPI ID
-        amount: amount,
-        note: `Payment for ${type} - ${orderId}`
-      } : null
+    // Generate QR code data
+    const qrCodeData = {
+      upiUrl,
+      upiId,
+      amount,
+      purpose,
+      merchantName
     };
 
-    return new Response(JSON.stringify(paymentResponse), {
+    // Return payment response with UPI details
+    return new Response(JSON.stringify({ 
+      success: true,
+      paymentMethod: "UPI",
+      qrCode: qrCodeData,
+      upiUrl: upiUrl,
+      instructions: "Scan the QR code with any UPI app or click the UPI link to complete payment"
+    }), {
       status: 200,
       headers: {
         "Content-Type": "application/json",

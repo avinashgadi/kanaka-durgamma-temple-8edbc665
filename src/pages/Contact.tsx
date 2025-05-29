@@ -39,7 +39,7 @@ const Contact = () => {
             <p><strong>Message:</strong></p>
             <p>${formData.message}</p>
           `,
-          from: formData.email
+          from: "Temple Management <onboarding@resend.dev>"
         }
       });
 
@@ -86,8 +86,8 @@ const Contact = () => {
                   <div>
                     <h3 className="font-semibold text-gray-800">Address</h3>
                     <p className="text-gray-600">
-                      Shiv Temple, SH 6, GSFC Township<br />
-                      Motikhavdi, Gujarat 361140
+                      FG5C+VH, Indugabilli<br />
+                      Andhra Pradesh 533407
                     </p>
                   </div>
                 </div>
@@ -95,7 +95,7 @@ const Contact = () => {
                   <Mail className="h-6 w-6 text-green-600 mt-1 mr-4 flex-shrink-0" />
                   <div>
                     <h3 className="font-semibold text-gray-800">Email</h3>
-                    <p className="text-gray-600">temple.gsfc@gmail.com</p>
+                    <p className="text-gray-600">durgamanshitha1@gmail.com</p>
                   </div>
                 </div>
                 <div className="flex items-start">
@@ -177,13 +177,17 @@ const Contact = () => {
         </div>
       </div>
 
-      {/* Map Section (Placeholder) */}
+      {/* Map Section */}
       <div className="bg-gray-200 h-96">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 text-center">
           <h3 className="text-2xl font-bold text-gray-800 mb-4">Temple Location</h3>
-          <p className="text-gray-600 mb-8">Find us on the map</p>
+          <p className="text-gray-600 mb-8">FG5C+VH, Indugabilli, Andhra Pradesh 533407</p>
           <div className="bg-gray-300 h-64 rounded-lg flex items-center justify-center">
-            <p className="text-gray-600">Interactive Map Coming Soon</p>
+            <div className="text-center">
+              <MapPin className="h-12 w-12 text-gray-600 mx-auto mb-4" />
+              <p className="text-gray-600 text-lg font-semibold">Temple Location</p>
+              <p className="text-gray-500">FG5C+VH, Indugabilli, Andhra Pradesh 533407</p>
+            </div>
           </div>
         </div>
       </div>

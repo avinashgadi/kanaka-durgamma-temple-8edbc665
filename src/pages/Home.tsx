@@ -122,14 +122,14 @@ const Home = () => {
               <MapPin className="h-8 w-8 text-orange-400 mx-auto mb-4" />
               <h3 className="text-lg font-semibold mb-2">Address</h3>
               <p className="text-gray-300">
-                Shiv Temple, SH 6, GSFC Township<br />
-                Motikhavdi, Gujarat 361140
+                FG5C+VH, Indugabilli<br />
+                Andhra Pradesh 533407
               </p>
             </div>
             <div className="text-center">
               <Mail className="h-8 w-8 text-orange-400 mx-auto mb-4" />
               <h3 className="text-lg font-semibold mb-2">Email</h3>
-              <p className="text-gray-300">temple.gsfc@gmail.com</p>
+              <p className="text-gray-300">durgamanshitha1@gmail.com</p>
             </div>
             <div className="text-center">
               <Phone className="h-8 w-8 text-orange-400 mx-auto mb-4" />
