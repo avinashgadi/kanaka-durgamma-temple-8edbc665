@@ -1,7 +1,15 @@
-
-import { Calendar, MapPin, Clock, Users, Bell, Star } from 'lucide-react';
+import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { Calendar, MapPin, Clock, Users, Bell, Star, Share2, Info } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
+import AnnouncementModal from '@/components/AnnouncementModal';
 
 const Announcements = () => {
+  const [selectedAnnouncement, setSelectedAnnouncement] = useState<any>(null);
+  const [modalOpen, setModalOpen] = useState(false);
+  const navigate = useNavigate();
+  const { toast } = useToast();
+
   const announcements = [
     {
       id: 1,
@@ -78,6 +86,59 @@ const Announcements = () => {
     }
   };
 
+  const handleShare = async (announcement: any) => {
+    const shareData = {
+      title: announcement.title,
+      text: announcement.description,
+      url: window.location.href + '#announcement-' + announcement.id,
+    };
+
+    try {
+      if (navigator.share) {
+        await navigator.share(shareData);
+        toast({
+          title: "Shared successfully",
+          description: "Announcement has been shared!",
+        });
+      } else {
+        // Fallback: copy to clipboard
+        await navigator.clipboard.writeText(`${announcement.title}\n\n${announcement.description}\n\nDate: ${announcement.date}\nTime: ${announcement.time}\nLocation: ${announcement.location}\n\nMore details: ${window.location.href}#announcement-${announcement.id}`);
+        toast({
+          title: "Copied to clipboard",
+          description: "Announcement details copied to clipboard!",
+        });
+      }
+    } catch (error) {
+      toast({
+        title: "Share failed",
+        description: "Unable to share at this time. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleMoreInfo = (announcement: any) => {
+    setSelectedAnnouncement(announcement);
+    setModalOpen(true);
+  };
+
+  const handleRegisterPooja = (announcement: any) => {
+    // Navigate to booking page with pre-selected service
+    const serviceMap: { [key: string]: string } = {
+      'Special Rudrabhishek': 'rudrabhishek',
+      'Mahamrityunjaya Havan': 'mahamrityunjaya',
+      'Daily Abhishek': 'abhishek'
+    };
+    
+    const serviceId = serviceMap[announcement.title] || 'special';
+    navigate(`/book-pooja?service=${serviceId}&date=${announcement.date}&time=${announcement.time.split(' - ')[0]}`);
+  };
+
+  const handleViewFestivalDetails = (announcement: any) => {
+    setSelectedAnnouncement(announcement);
+    setModalOpen(true);
+  };
+
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
@@ -112,7 +173,7 @@ const Announcements = () => {
         {/* Announcements List */}
         <div className="space-y-6">
           {announcements.map((announcement) => (
-            <div key={announcement.id} className="bg-white rounded-lg shadow-lg overflow-hidden hover:shadow-xl transition-shadow">
+            <div key={announcement.id} className="bg-white rounded-lg shadow-lg overflow-hidden hover:shadow-xl transition-shadow" id={`announcement-${announcement.id}`}>
               <div className="p-6">
                 <div className="flex justify-between items-start mb-4">
                   <div className="flex items-center space-x-3">
@@ -149,7 +210,7 @@ const Announcements = () => {
                 <p className="text-gray-700 mb-4">{announcement.description}</p>
 
                 {/* Highlights */}
-                <div className="bg-gray-50 rounded-lg p-4">
+                <div className="bg-gray-50 rounded-lg p-4 mb-4">
                   <h4 className="font-semibold text-gray-800 mb-2">Highlights:</h4>
                   <ul className="space-y-1">
                     {announcement.highlights.map((highlight, index) => (
@@ -162,21 +223,35 @@ const Announcements = () => {
                 </div>
 
                 {/* Action Buttons */}
-                <div className="flex flex-wrap gap-3 mt-4">
+                <div className="flex flex-wrap gap-3">
                   {announcement.type === 'pooja' && (
-                    <button className="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors">
+                    <button 
+                      onClick={() => handleRegisterPooja(announcement)}
+                      className="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+                    >
                       Register for Pooja
                     </button>
                   )}
                   {announcement.type === 'festival' && (
-                    <button className="bg-orange-600 hover:bg-orange-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors">
+                    <button 
+                      onClick={() => handleViewFestivalDetails(announcement)}
+                      className="bg-orange-600 hover:bg-orange-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+                    >
                       View Festival Details
                     </button>
                   )}
-                  <button className="bg-gray-200 hover:bg-gray-300 text-gray-800 px-4 py-2 rounded-lg text-sm font-medium transition-colors">
+                  <button 
+                    onClick={() => handleShare(announcement)}
+                    className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2"
+                  >
+                    <Share2 className="h-4 w-4" />
                     Share
                   </button>
-                  <button className="bg-gray-200 hover:bg-gray-300 text-gray-800 px-4 py-2 rounded-lg text-sm font-medium transition-colors">
+                  <button 
+                    onClick={() => handleMoreInfo(announcement)}
+                    className="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2"
+                  >
+                    <Info className="h-4 w-4" />
                     More Info
                   </button>
                 </div>
@@ -203,6 +278,12 @@ const Announcements = () => {
           </div>
         </div>
       </div>
+
+      <AnnouncementModal
+        isOpen={modalOpen}
+        onClose={() => setModalOpen(false)}
+        announcement={selectedAnnouncement}
+      />
     </div>
   );
 };

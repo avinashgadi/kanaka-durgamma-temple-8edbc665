@@ -1,5 +1,5 @@
-
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { Calendar, Clock, User, Heart, Star } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
@@ -7,6 +7,7 @@ import { useToast } from '@/hooks/use-toast';
 import AuthModal from '@/components/AuthModal';
 
 const BookPooja = () => {
+  const [searchParams] = useSearchParams();
   const [selectedPooja, setSelectedPooja] = useState('');
   const [selectedDate, setSelectedDate] = useState('');
   const [selectedTime, setSelectedTime] = useState('');
@@ -23,6 +24,17 @@ const BookPooja = () => {
   
   const { user } = useAuth();
   const { toast } = useToast();
+
+  // Pre-fill form from URL parameters
+  useEffect(() => {
+    const service = searchParams.get('service');
+    const date = searchParams.get('date');
+    const time = searchParams.get('time');
+    
+    if (service) setSelectedPooja(service);
+    if (date) setSelectedDate(date);
+    if (time) setSelectedTime(time);
+  }, [searchParams]);
 
   const poojaServices = [
     {
