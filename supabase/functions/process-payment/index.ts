@@ -1,90 +1,76 @@
 
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 
 const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers":
+    "authorization, x-client-info, apikey, content-type",
+};
+
+interface PaymentRequest {
+  amount: number;
+  currency: string;
+  orderId: string;
+  type: 'donation' | 'pooja';
+  donationData?: any;
+  poojaData?: any;
+  paymentMethod?: 'upi' | 'qr' | 'card';
 }
 
-serve(async (req) => {
-  // Handle CORS preflight requests
-  if (req.method === 'OPTIONS') {
+const handler = async (req: Request): Promise<Response> => {
+  if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    const supabaseClient = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_ANON_KEY') ?? '',
-    )
+    const { amount, currency, orderId, type, donationData, poojaData, paymentMethod }: PaymentRequest = await req.json();
 
-    const { amount, currency, orderId, type, bookingData, donationData } = await req.json();
+    console.log('Processing payment:', { amount, currency, orderId, type, paymentMethod });
 
-    console.log('Processing payment for amount:', amount);
-    console.log('Order ID:', orderId);
-    console.log('Type:', type);
-
-    // Here you would integrate with Razorpay/Paytm
-    // For now, we'll simulate payment processing
-    const paymentId = `pay_${Math.random().toString(36).substr(2, 9)}`;
+    // For now, we'll simulate the payment process
+    // You can provide your PhonePe/GPay QR code and we'll integrate it properly
     
-    // Simulate payment success (you'd check actual payment status)
-    const paymentSuccess = true;
+    // Simulate payment processing delay
+    await new Promise(resolve => setTimeout(resolve, 1000));
 
-    if (paymentSuccess) {
-      if (type === 'pooja') {
-        // Update pooja booking with payment details
-        const { error } = await supabaseClient
-          .from('pooja_bookings')
-          .update({
-            payment_status: 'completed',
-            payment_id: paymentId
-          })
-          .eq('id', bookingData.id);
+    // Generate payment response
+    const paymentResponse = {
+      success: true,
+      transactionId: `txn_${Date.now()}`,
+      orderId: orderId,
+      amount: amount,
+      currency: currency,
+      status: 'completed',
+      paymentMethod: paymentMethod || 'upi',
+      timestamp: new Date().toISOString(),
+      // QR code data will be added when you provide your UPI details
+      qrCode: paymentMethod === 'qr' ? {
+        upiId: 'merchant@paytm', // Replace with your actual UPI ID
+        amount: amount,
+        note: `Payment for ${type} - ${orderId}`
+      } : null
+    };
 
-        if (error) throw error;
-      } else if (type === 'donation') {
-        // Update donation with payment details
-        const { error } = await supabaseClient
-          .from('donations')
-          .update({
-            payment_status: 'completed',
-            payment_id: paymentId
-          })
-          .eq('id', donationData.id);
-
-        if (error) throw error;
-      }
-
-      return new Response(
-        JSON.stringify({ 
-          success: true, 
-          paymentId,
-          message: 'Payment processed successfully' 
-        }),
-        {
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          status: 200,
-        }
-      );
-    } else {
-      return new Response(
-        JSON.stringify({ success: false, message: 'Payment failed' }),
-        {
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          status: 400,
-        }
-      );
-    }
-  } catch (error) {
-    console.error('Error processing payment:', error);
+    return new Response(JSON.stringify(paymentResponse), {
+      status: 200,
+      headers: {
+        "Content-Type": "application/json",
+        ...corsHeaders,
+      },
+    });
+  } catch (error: any) {
+    console.error("Error in process-payment function:", error);
     return new Response(
-      JSON.stringify({ error: error.message }),
+      JSON.stringify({ 
+        success: false, 
+        error: error.message 
+      }),
       {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 400,
+        status: 500,
+        headers: { "Content-Type": "application/json", ...corsHeaders },
       }
     );
   }
-})
+};
+
+serve(handler);

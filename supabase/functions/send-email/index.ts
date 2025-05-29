@@ -1,45 +1,66 @@
 
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
+import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
+import { Resend } from "npm:resend@2.0.0";
+
+const resend = new Resend("re_DVBCEiTQ_Db31TMhcq5oLEXA1jwXziTh6");
 
 const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers":
+    "authorization, x-client-info, apikey, content-type",
+};
+
+interface EmailRequest {
+  to: string;
+  subject: string;
+  html: string;
+  from?: string;
 }
 
-serve(async (req) => {
+const handler = async (req: Request): Promise<Response> => {
   // Handle CORS preflight requests
-  if (req.method === 'OPTIONS') {
+  if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    const { to, subject, html, from } = await req.json();
+    const { to, subject, html, from }: EmailRequest = await req.json();
 
     console.log('Sending email to:', to);
     console.log('Subject:', subject);
 
-    // Here you would integrate with an email service like SendGrid, Resend, or similar
-    // For now, we'll just log the email content
-    console.log('Email content:', html);
+    const emailResponse = await resend.emails.send({
+      from: from || "Temple Management <onboarding@resend.dev>",
+      to: [to],
+      subject: subject,
+      html: html,
+    });
 
-    // Simulate email sending
-    await new Promise(resolve => setTimeout(resolve, 1000));
+    console.log("Email sent successfully:", emailResponse);
 
+    return new Response(JSON.stringify({ 
+      success: true, 
+      data: emailResponse 
+    }), {
+      status: 200,
+      headers: {
+        "Content-Type": "application/json",
+        ...corsHeaders,
+      },
+    });
+  } catch (error: any) {
+    console.error("Error in send-email function:", error);
     return new Response(
-      JSON.stringify({ success: true, message: 'Email sent successfully' }),
+      JSON.stringify({ 
+        success: false, 
+        error: error.message 
+      }),
       {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 200,
-      }
-    );
-  } catch (error) {
-    console.error('Error sending email:', error);
-    return new Response(
-      JSON.stringify({ error: error.message }),
-      {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 400,
+        status: 500,
+        headers: { "Content-Type": "application/json", ...corsHeaders },
       }
     );
   }
-})
+};
+
+serve(handler);

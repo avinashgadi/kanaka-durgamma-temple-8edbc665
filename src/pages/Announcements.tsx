@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Calendar, MapPin, Clock, Users, Bell, Star, Share2, Info } from 'lucide-react';
@@ -87,32 +88,53 @@ const Announcements = () => {
   };
 
   const handleShare = async (announcement: any) => {
-    const shareData = {
-      title: announcement.title,
-      text: announcement.description,
-      url: window.location.href + '#announcement-' + announcement.id,
-    };
+    const shareText = `${announcement.title}\n\n${announcement.description}\n\nDate: ${new Date(announcement.date).toLocaleDateString()}\nTime: ${announcement.time}\nLocation: ${announcement.location}\n\nMore details: ${window.location.origin}/announcements#announcement-${announcement.id}`;
 
     try {
-      if (navigator.share) {
-        await navigator.share(shareData);
+      // First try the Web Share API (works on mobile browsers)
+      if (navigator.share && navigator.canShare && navigator.canShare({ text: shareText })) {
+        await navigator.share({
+          title: announcement.title,
+          text: announcement.description,
+          url: `${window.location.origin}/announcements#announcement-${announcement.id}`,
+        });
         toast({
           title: "Shared successfully",
           description: "Announcement has been shared!",
         });
-      } else {
-        // Fallback: copy to clipboard
-        await navigator.clipboard.writeText(`${announcement.title}\n\n${announcement.description}\n\nDate: ${announcement.date}\nTime: ${announcement.time}\nLocation: ${announcement.location}\n\nMore details: ${window.location.href}#announcement-${announcement.id}`);
+        return;
+      }
+
+      // Fallback: copy to clipboard
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        await navigator.clipboard.writeText(shareText);
         toast({
           title: "Copied to clipboard",
-          description: "Announcement details copied to clipboard!",
+          description: "Announcement details copied! You can now paste and share it.",
         });
+        return;
       }
-    } catch (error) {
+
+      // Final fallback: create a temporary textarea
+      const textArea = document.createElement('textarea');
+      textArea.value = shareText;
+      textArea.style.position = 'fixed';
+      textArea.style.opacity = '0';
+      document.body.appendChild(textArea);
+      textArea.select();
+      document.execCommand('copy');
+      document.body.removeChild(textArea);
+      
       toast({
-        title: "Share failed",
-        description: "Unable to share at this time. Please try again.",
-        variant: "destructive",
+        title: "Copied to clipboard",
+        description: "Announcement details copied! You can now paste and share it.",
+      });
+    } catch (error) {
+      console.error('Share error:', error);
+      // Even if everything fails, show a message with the text
+      toast({
+        title: "Share manually",
+        description: "Please copy this text to share: " + announcement.title,
       });
     }
   };
