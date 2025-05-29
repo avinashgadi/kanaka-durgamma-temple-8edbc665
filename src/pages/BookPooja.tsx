@@ -157,6 +157,27 @@ const BookPooja = () => {
     }
   };
 
+  const handlePaymentTimeout = () => {
+    setPaymentModalOpen(false);
+    setPaymentData(null);
+    // Reset form
+    setSelectedPooja('');
+    setSelectedDate('');
+    setSelectedTime('');
+    setBookingDetails({
+      name: '',
+      email: '',
+      phone: '',
+      occasion: '',
+      specialRequests: ''
+    });
+    toast({
+      title: "Payment Session Expired",
+      description: "Please restart the booking process for security.",
+      variant: "destructive",
+    });
+  };
+
   const selectedService = poojaServices.find(p => p.id === selectedPooja);
 
   return (
@@ -392,6 +413,7 @@ const BookPooja = () => {
               specialRequests: ''
             });
           }}
+          onTimeout={handlePaymentTimeout}
           paymentData={paymentData}
         />
       )}
